@@ -1,0 +1,23 @@
+# Compiled and Build Stuff
+*.py[co]
+/build/
+/dist/
+/docs/_build/
+MANIFEST
+
+# Backup files
+*.sw[po]
+*~
+
+# System cruft
+Thumbs.db
+.DS_Store
+
+# PyCharm Nonsense
+/.idea/
+
+# Logs
+/log/
+
+# Ignore /lib/ until NakedSun has its own unique lib.
+/lib/
