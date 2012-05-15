@@ -16,25 +16,27 @@
 #
 ###############################################################################
 """
-An easilly customizable MUD server written in Python that makes minimal
-assumptions about the game you want to create, providing a bare framework on
-which you can design anything you want without having to rip out useless
-systems like pre-existing stats systems.
+The storage package contains all the available storage engines for NakedSun and
+automatically imports the appropriate engine when it's imported.
 """
 
 ###############################################################################
 # Imports
 ###############################################################################
 
-from . import bitvectors
-from . import event
-from . import hooks
-from . import semver
-from . import settings
+import nakedsun.settings
 
 ###############################################################################
-# Exports
+# Logic
 ###############################################################################
 
-__authors__ = ["Stendec"]
-__version__ = version = semver.Version("0.1.0-dev")
+# Get the storage module.
+name = nakedsun.settings.get('storage_engine', 'nakedmud')
+module = __import__(name, globals(), locals())
+
+# Grab what we want.
+StorageList = module.StorageList
+StorageSet = module.StorageSet
+
+# And only export what we want.
+__all__ = ['StorageList', 'StorageSet']

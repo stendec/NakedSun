@@ -45,7 +45,6 @@ def signal_HUP(signum, frame):
     """
     If we catch a SIGHUP, the MUD should perform a copyover.
     """
-    import nakedsun.mudsys
     raise nakedsun.mudsys.SystemCopyover
 
 ###############################################################################
@@ -83,13 +82,13 @@ def main():
                 description=nakedsun.__doc__,
                 version="NakedSun %s" % nakedsun.version
                 )
-    
+
     # Basic Options
-    
+
     parser.add_argument("--path", dest="lib", default="lib", metavar="PATH",
                         help="Load the MUD library from PATH.")
     parser.add_argument("--copyover", help=argparse.SUPPRESS)
-    
+
     # Network Options
     group = parser.add_argument_group(
                 u"Network Options",
@@ -149,24 +148,18 @@ def main():
     if not os.path.exists(path) or not (
             os.path.exists(os.path.join(path, 'muddata')) or
             os.path.exists(os.path.join(path, 'config'))):
-        log.error(u"Cannot find the MUD library at %r." % path)
+        log.error(u"Cannot find the MUD library at: %s" % path)
         log.shutdown()
         sys.exit(1)
 
     if path != os.getcwd():
-        log.info(u"Changing working directory to %r." % path)
+        log.info(u"Changing working directory to: %s" % path)
         os.chdir(path)
-
-    ## Initialize Basic Functionality
-    
-    # Inject our modules in preparation for loading the MUD library.
-    for module in ("bitvectors", "event", "hooks"):
-        inject(module, getattr(nakedsun, module))
 
     ## Load Configuration
 
     log.info(u"Loading MUD configuration from file.")
-    log.todo(u"Actually load the configuration.")
+    nakedsun.settings.initialize()
 
     ## Networking Initialization
 
@@ -181,6 +174,11 @@ def main():
     ## NakedMud Compatibility
 
     log.todo(u"Load NakedMud Compatibility Layer.")
+
+    # Inject a series of modules into sys.modules for NakedMud compatibility.
+    log.info(u"Injecting global modules for NakedMud compatibility.")
+    for module in ("bitvectors", "event", "hooks"):
+        inject(module, getattr(nakedsun, module))
 
     ## MUD Library Initialization
 
@@ -201,7 +199,7 @@ def main():
         assume_uid(args.user, args.group, args.umask)
 
     ## The Event Loop
-    
+
     log.info(u"Entering the game loop.")
     log.line()
 

@@ -25,8 +25,6 @@ compatibility with NakedMud.
 # Imports
 ###############################################################################
 
-import functools
-import time
 import weakref
 
 from pants.engine import Engine
@@ -43,7 +41,7 @@ __queued__ = {}
 
 def interrupt_events_involving(thing):
     """
-    Deschedule any currently pending events involving the provided object.
+    De-schedule any currently pending events involving the provided object.
     """
     if not thing in __queued__:
         return
@@ -63,13 +61,13 @@ def start_event(owner, delay, event_func, data=None, arg='', *args, **kwargs):
     :class:`mudsock.Mudsock`, :class:`obj.Obj`, or :class:`room.Room`.
 
     If the owner *is* one of those classes, any currently pending events are
-    descheduled automatically when the owner is destroyed.
+    de-scheduled automatically when the owner is destroyed.
 
     Event functions should take a minimum of three arguments: the event owner,
     ``data``, and ``arg``. This is for compatibility with NakedMud. You may
     provide additional positional and keyword arguments if you wish.
 
-    Returns a callable that deschedules the event when called.
+    Returns a callable that de-schedules the event when called.
 
     ===========  ============
     Argument     Description

@@ -59,7 +59,7 @@ class Bitvector(object):
         if isinstance(vector, Bitvector):
             _setattr(self, '_vector', vector._vector)
             _setattr(self, '_vecname', vector._vecname)
-            _setattr(self, '_bits', vectors._bits.copy())
+            _setattr(self, '_bits', vector._bits.copy())
         else:
             if not isinstance(vector, basestring):
                 raise TypeError("Vector must be a string key.")
