@@ -104,8 +104,6 @@ def initialize():
     if not get('main_addr'):
         set('main_addr', ':4000', False)
 
-    print repr(_settings)
-
     # Save for fun.
     save_settings()
 

@@ -35,6 +35,13 @@ import pants
 import nakedsun
 import nakedsun.logger as log
 
+try:
+    import pwd
+    import grp
+except ImportError:
+    pwd = None
+    grp = None
+
 do_uid = hasattr(os, "getuid")
 
 ###############################################################################
@@ -55,7 +62,112 @@ def assume_uid(uid, gid, umask):
     """
     Assume the given UID, GID, and UMASK.
     """
-    log.todo(u"UID/GID/UMASK support.")
+
+    # First, make sure we have values.
+    if uid is None:
+        uid = nakedsun.settings.get("uid")
+    try:
+        uid = int(uid)
+    except (TypeError, ValueError):
+        pass
+
+    if gid is None:
+        gid = nakedsun.settings.get("gid")
+    try:
+        gid = int(gid)
+    except (TypeError, ValueError):
+        pass
+
+    if umask is None:
+        umask = nakedsun.settings.get("umask")
+    try:
+        umask = int(umask)
+    except (TypeError, ValueError):
+        if umask:
+            log.warning("Invalid value for umask %r." % umask)
+        umask = None
+
+    # Do the UID first.
+    if not uid is None:
+        # Try assuming the new UID.
+        try:
+            # Make sure we're working with an integer.
+            if isinstance(uid, basestring):
+                try:
+                    uid = pwd.getpwnam(uid).pw_uid
+                except KeyError:
+                    log.critical("No such user %r." % uid)
+                    log.shutdown()
+                    sys.exit(1)
+
+            if os.getuid() != uid:
+                # Now set it.
+                os.setuid(uid)
+
+                # Show a message.
+                try:
+                    log.info("Assuming the UID %d (%s)." % (uid,
+                                                    pwd.getpwuid(uid).pw_name))
+                except (KeyError, AttributeError):
+                    log.info("Assuming the UID %d." % uid)
+        except OSError:
+            try:
+                log.critical("Unable to assume the UID %d (%s)." % (uid,
+                                                    pwd.getpwuid(uid).pw_name))
+            except (KeyError, AttributeError):
+                log.critical("Unable to assume the UID %d." % uid)
+            log.shutdown()
+            sys.exit(1)
+
+    # Anti-Root Protection
+    if os.getuid() == 0:
+        if uid == 0:
+            log.warning("The server is running as root. This is "
+                        "not recommended.")
+        else:
+            log.critical("Please do not run the server as root.")
+            log.critical("Set a UID via the --uid command-line argument, or "
+                         "in the MUD configuration file. If the server must "
+                         "run as root, provide a UID of 0.")
+            log.shutdown()
+            sys.exit(1)
+
+    # Now do the GID.
+    if not gid is None:
+        # Try assuming the new GID.
+        try:
+            # Make sure we're working with an integer.
+            if isinstance(gid, basestring):
+                try:
+                    gid = grp.getgrnam(gid).gr_gid
+                except KeyError:
+                    log.critical("No such group %r." % gid)
+                    log.shutdown()
+                    sys.exit(1)
+
+            if os.getgid() != gid:
+                # Now set it.
+                os.setgid(gid)
+
+                # Log a message.
+                try:
+                    log.info("Assuming the GID %d (%s)." % (gid,
+                                                    grp.getgrgid(gid).gr_name))
+                except (KeyError, AttributeError):
+                    log.info("Assuming the GID %d." % gid)
+        except OSError:
+            try:
+                log.critical("Unable to assume the GID %d (%s)." % (gid,
+                                                    grp.getgrgid(gid).gr_name))
+            except (KeyError, AttributeError):
+                log.critical("Unable to assume the GID %d." % gid)
+            log.shutdown()
+            sys.exit(1)
+
+    # Lastly, the umask.
+    if not umask is None:
+        old = os.umask(umask)
+        log.info("Assuming the umask %04o (old was %04o)." % (umask, old))
 
 def inject(name, module):
     """
@@ -126,8 +238,8 @@ def main():
             u"or numbers. These values may also be set in the MUD's "
             u"configuration file.")
 
-        group.add_argument("-u", "--user", help=u"Run as the specified user.")
-        group.add_argument("-g", "--group",
+        group.add_argument("-u", "--uid", help=u"Run as the specified user.")
+        group.add_argument("-g", "--gid",
             help=u"Run as the specified group.")
         group.add_argument("--umask", help=u"Use the provided umask.")
         group.add_argument("--early", default=False, action="store_true",
@@ -139,7 +251,7 @@ def main():
 
     ## Logging
 
-    log.initialize(args.color, True, os.path.join(args.lib, args.log))
+    log.initialize(args.color, args.level, os.path.join(args.lib, args.log))
     log.naked(u"NakedSun v%s by Stendec <me@stendec.me>" % nakedsun.version)
 
     ## Enter the MUD Library
@@ -169,11 +281,13 @@ def main():
     ## Early UID/GID Manipulation
 
     if do_uid and args.early:
-        assume_uid(args.user, args.group, args.umask)
+        assume_uid(args.uid, args.gid, args.umask)
 
     ## NakedMud Compatibility
 
-    log.todo(u"Load NakedMud Compatibility Layer.")
+    if nakedsun.settings.get("nakedmud_compatible"):
+        log.info("Loading NakedMud Compatibility Layer.")
+        from . import nmcompat
 
     # Inject a series of modules into sys.modules for NakedMud compatibility.
     log.info(u"Injecting global modules for NakedMud compatibility.")
@@ -196,7 +310,7 @@ def main():
     ## Late UID/GID Manipulation
 
     if do_uid and not args.early:
-        assume_uid(args.user, args.group, args.umask)
+        assume_uid(args.uid, args.gid, args.umask)
 
     ## The Event Loop
 

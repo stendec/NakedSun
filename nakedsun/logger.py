@@ -82,7 +82,7 @@ class ColoredFormatter(logging.Formatter):
 # Initialization
 ###############################################################################
 
-def initialize(use_color, use_debug, path, logger=''):
+def initialize(use_color, level, path, logger=''):
     """
     Initialize NakedSun's logger.
     """
@@ -95,6 +95,16 @@ def initialize(use_color, use_debug, path, logger=''):
     global info
     global warning
     global log
+
+    ## Parse the Level
+    if isinstance(level, basestring):
+        if level.upper() in dir(logging):
+            level = getattr(logging, level.upper())
+        else:
+            try:
+                level = int(level)
+            except (TypeError, ValueError):
+                level = logging.INFO
 
     ## Colorization
 
@@ -138,19 +148,13 @@ def initialize(use_color, use_debug, path, logger=''):
     warning = _log.warning
 
     # Set the logging level.
-    if use_debug:
-        _log.setLevel(logging.DEBUG)
-    else:
-        _log.setLevel(logging.INFO)
+    _log.setLevel(level)
 
     ## The Console Handler
 
     # Create the stream handler and set its level too.
     console = logging.StreamHandler()
-    if use_debug:
-        console.setLevel(logging.DEBUG)
-    else:
-        console.setLevel(logging.INFO)
+    console.setLevel(level)
 
     # Are we using color? Make sure we are.
     if use_color:
@@ -185,7 +189,7 @@ def initialize(use_color, use_debug, path, logger=''):
                     filename    = os.path.join(path, "log"),
                     when        = "midnight"
                     )
-        file.setLevel(logging.INFO)
+        file.setLevel(max(logging.INFO, level))
 
         formatter = logging.Formatter(
             u"%(asctime)s\t%(levelname)s\t%(message)s",
