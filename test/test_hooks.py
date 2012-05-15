@@ -26,18 +26,6 @@ This file contains tests for the hooks module.
 from nakedsun import hooks
 
 ###############################################################################
-# Initialization
-###############################################################################
-
-from nakedsun import logger as log
-
-def dummy(*args, **kwargs):
-    pass
-
-log.log = log.info = log.debug = log.warning = log.error = log.critical = \
-log.exception = dummy
-
-###############################################################################
 # The Tests
 ###############################################################################
 
