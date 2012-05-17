@@ -101,9 +101,6 @@ def initialize():
         else:
             set('start_room', 'house@examples', False)
 
-    if not get('main_addr'):
-        set('main_addr', ':4000', False)
-
     # Save for fun.
     save_settings()
 

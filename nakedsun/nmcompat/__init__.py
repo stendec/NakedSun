@@ -24,7 +24,7 @@ with NakedMud, but not essential to the core of the MUD server.
 # Imports
 ###############################################################################
 
-#from . import dynvars
+from . import dynvars
 
 from nakedsun import logger as log
 

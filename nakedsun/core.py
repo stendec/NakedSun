@@ -276,7 +276,9 @@ def main():
     ## Networking Initialization
 
     log.info(u"Initializing the network.")
-    log.todo(u"Actually initialize the network.")
+
+    from . import network
+    network.initialize(args.addr, args.http_addr)
 
     ## Early UID/GID Manipulation
 
@@ -314,6 +316,16 @@ def main():
         assume_uid(args.uid, args.gid, args.umask)
 
     ## The Event Loop
+
+    # Hacks!
+    @nakedsun.hooks.hook
+    def receive_connection(sock):
+        log.info("New connection #%d from remote host %r." % (sock.uid, sock._connection.remote_addr))
+        sock.send("This is awesome.")
+
+    @nakedsun.hooks.hook
+    def dns_complete(sock):
+        log.info("Resolved connection #%d to %r." % (sock.uid, sock.hostname))
 
     log.info(u"Entering the game loop.")
     log.line()

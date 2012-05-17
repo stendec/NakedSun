@@ -23,14 +23,16 @@ server and deals with telnet state.
 ###############################################################################
 # Imports
 ###############################################################################
+import codecs
 
-import pants
+import pants.util.dns
 from time import time as now
 import weakref
 
 from . import auxiliary
 from . import hooks
 from . import logger as log
+from . import settings
 
 ###############################################################################
 # Storage and Constants
@@ -74,23 +76,29 @@ class Mudsock(auxiliary.AuxiliaryBase):
 
         # Connect to the connection.
         self._connection = connection
+        connection.read_delimiter = "\n"
+        connection.on_read = self._on_read
 
         # Internal State
         self._ihs = []
         self._ch = None
+        self._encoding = None
         self._account = None
         self._can_use = False
         self._hostname = None
         self._last_activity = now()
 
+        # Set the default text encoding.
+        self.set_encoding(settings.get("default_encoding", "utf8"))
+
         # Weird public variable.
         self.outbound_text = None
 
         # Store a reference to this instance.
-        _sockets.append(weakref.ref(self))
+        self._ref = weakref.ref(self)
+        _sockets.append(self._ref)
 
         # Start resolving the hostname.
-
         pants.util.dns.gethostbyaddr(connection.remote_addr[0], self._got_host)
 
     ##### Properties ###########################################################
@@ -152,6 +160,24 @@ class Mudsock(auxiliary.AuxiliaryBase):
         """ The unique ID for this connection. """
         return self._uid
 
+    ##### Encoding #############################################################
+
+    def set_encoding(self, encoding):
+        """
+        Set the socket's character encoding to the provided encoding, allowing
+        the transfer of unicode across the connection. If necessary, an
+        incremental decoder is created for reading the received data.
+        """
+        if encoding == self._encoding:
+            return
+        self._encoding = encoding
+
+        # Get an incremental decoder.
+        try:
+            self._decoder = codecs.getincrementaldecoder(encoding)("replace")
+        except LookupError:
+            self._decoder = None
+
     ##### Input Handlers #######################################################
 
     def pop_ih(self):
@@ -181,7 +207,7 @@ class Mudsock(auxiliary.AuxiliaryBase):
                     state = handler.func_name
                 log.exception("An error occurred while running the input "
                               "handler cleanup function for the state %r on "
-                              "%r." % (state, self))
+                              "connection #%d." % (state, self._uid))
 
         return True
 
@@ -213,6 +239,64 @@ class Mudsock(auxiliary.AuxiliaryBase):
         self.pop_ih()
         self.push_ih(handler_func, prompt_func, state, cleanup_func)
 
+    ##### Communication ########################################################
+
+    @log.implement
+    def bust_prompt(self):
+        """
+        Mark the connection to have its prompt re-sent next pulse.
+        """
+        pass
+
+    def close(self):
+        """ Close the connection. """
+
+        # Reference cleanup.
+        if self._ref in _sockets:
+            _sockets.remove(self._ref)
+
+        # Character cleanup.
+        if self._ch:
+            log.todo("Disassociate character from closing socket.")
+
+        # Account cleanup. Yay.
+        if self._account:
+            self._account = None
+
+        # Handler cleanup.
+        while self.pop_ih():
+            continue
+
+        # Socket cleanup.
+        if self._connection:
+            con = self._connection
+            self._connection = None
+            con.close()
+
+        # Ex-ter-min-ate.
+
+    def send(self, message, environ=None, newline=True):
+        """
+        Send the message to the remote host. Additionally, if an environment is
+        provided, the message will be processed with the active template engine
+        before being sent. If newline is True, a line return will be appended
+        to the message as well.
+        """
+        if environ:
+            log.todo("Implement a template engine.")
+
+        if newline:
+            message += "\r\n"
+
+        log.todo("Implement proper output buffering.")
+        self._connection.write(message)
+
+    def send_raw(self, message):
+        """
+        Send the message to the remote host without appending a line return.
+        """
+        self.send(message, newline=False)
+
     ##### Private Event Handlers ###############################################
 
     def _got_host(self, result):
@@ -226,6 +310,39 @@ class Mudsock(auxiliary.AuxiliaryBase):
         # Now, notify other code that we're done.
         self._can_use = True
         hooks.run("dns_complete", self)
+
+    def _on_read(self, data):
+        """
+        Handle incoming text from the remote host. Convert it into unicode and
+        pass it along to the input handler.
+        """
+        if data.endswith("\r"):
+            data = data[:-1]
+
+        # Make sure we have an input handler. If not, give the socket one chance
+        # to acquire one.
+        if not self._ihs:
+            hooks.run("bare_socket", self)
+            if not self._ihs and self._connection.connected:
+                log.warning("Closing connection #%d as it lacks input "
+                            "handlers." % self._uid)
+                self.close()
+                return
+
+        # Send the data through the input handlers.
+        handlers = self._ihs[:]
+        while data:
+            handler, prompt, state = handlers.pop()[:3]
+            try:
+                data = handler(self, data)
+            except Exception:
+                log.exception("An error occurred while running the input "
+                              "handler for state %r on connection #%d." %
+                              (state, self._uid))
+                break
+
+        # Bust the prompt.
+        self.bust_prompt()
 
 ###############################################################################
 # Public Functions
