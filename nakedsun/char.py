@@ -16,30 +16,28 @@
 #
 ###############################################################################
 """
-An easilly customizable MUD server written in Python that makes minimal
-assumptions about the game you want to create, providing a bare framework on
-which you can design anything you want without having to rip out useless
-systems like pre-existing stats systems.
+This module contains miscellaneous utility functions for the MUD.
 """
 
 ###############################################################################
 # Imports
 ###############################################################################
 
+import os
+
 from . import auxiliary
 from . import bitvectors
-from . import char
-from . import event
 from . import hooks
-from . import mud
-from . import mudsock
-from . import mudsys
-from . import semver
-from . import settings
+from . import logger as log
 
 ###############################################################################
-# Exports
+# Char Class
 ###############################################################################
 
-__authors__ = ["Stendec"]
-__version__ = version = semver.Version("0.1.0-dev")
+class Char(auxiliary.AuxiliaryBase):
+    """
+    This class represents a character in the NakedSun server, be that character
+    a player character or an NPC. It is responsible for tracking any and all
+    information on a character and interacting with that character.
+    """
+    pass

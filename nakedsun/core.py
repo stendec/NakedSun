@@ -293,13 +293,55 @@ def main():
 
     # Inject a series of modules into sys.modules for NakedMud compatibility.
     log.info(u"Injecting global modules for NakedMud compatibility.")
-    for module in ("auxiliary", "bitvectors", "event", "hooks", "mudsock",
-                   "mudsys"):
+    for module in ("auxiliary", "bitvectors", "char", "event", "hooks",
+                   "mudsock", "mud", "mudsys"):
         inject(module, getattr(nakedsun, module))
 
     ## MUD Library Initialization
 
-    log.todo(u"Execution of MUD library.")
+    log.info(u"Loading the MUD library.")
+
+    # If it doesn't exist, die.
+    if not os.path.exists("pymodules"):
+        log.error(u"Cannot find pymodules in the MUD library.")
+        log.shutdown()
+        sys.exit(1)
+
+    # Either load pymodules as a module or load its contents.
+    if os.path.exists(os.path.join("pymodules", "__init__.py")):
+        log.debug("Importing module: pymodules")
+        import pymodules
+
+    else:
+        log.debug("pymodules is not a package. Entering directory.")
+        path = os.path.abspath("pymodules")
+        sys.path.insert(0, path)
+
+        # Scan through.
+        for fn in sorted(os.listdir("pymodules")):
+            full = os.path.join(path, fn)
+
+            # Skip hidden entries, non-.py files, and folders that aren't
+            # python packages.
+            if fn.startswith(".") or (os.path.isfile(full) and not
+                    fn.endswith(".py")) or (os.path.isdir(full) and not
+                    os.path.exists(os.path.join(full, "__init__.py"))):
+                continue
+
+            # If it's a file, trim off the end.
+            if fn.endswith(".py"):
+                fn = fn[:-3]
+
+            # Log a message, and then load the module.
+            log.debug("Importing module: %s" % fn)
+
+            try:
+                nakedsun.mudsys.pymodules[fn] = __import__(fn)
+            except Exception:
+                log.exception("An error occurred when attempting to import "
+                              "Python module: %s (%s)" % (fn, full))
+                log.shutdown()
+                sys.exit(1)
 
     ## Copyover Recovery
 
