@@ -26,9 +26,12 @@ systems like pre-existing stats systems.
 # Imports
 ###############################################################################
 
+from . import auxiliary
 from . import bitvectors
 from . import event
 from . import hooks
+from . import mudsock
+from . import mudsys
 from . import semver
 from . import settings
 

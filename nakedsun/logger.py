@@ -30,6 +30,7 @@ import logging.handlers
 import os
 import subprocess
 import sys
+import time
 
 ###############################################################################
 # Storage and Constants
@@ -209,6 +210,19 @@ def initialize(use_color, level, path, logger=''):
 ###############################################################################
 # Useful Functions
 ###############################################################################
+
+def implement(func, last={}):
+    """
+    Log a simple to-do message, but keep it rate-limited to avoid spam.
+    """
+    last[func] = 0
+    def wrapper(*args, **kwargs):
+        now = time.time()
+        if now - last[func] > 30:
+            todo("Implement: %s.%s" % (func.__module__, func.func_name))
+        last[func] = now
+        return func(*args, **kwargs)
+    return wrapper
 
 def mud(msg, *a, **kw):
     log(MUD, msg, *a, **kw)

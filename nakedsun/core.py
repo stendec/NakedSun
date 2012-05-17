@@ -291,7 +291,8 @@ def main():
 
     # Inject a series of modules into sys.modules for NakedMud compatibility.
     log.info(u"Injecting global modules for NakedMud compatibility.")
-    for module in ("bitvectors", "event", "hooks"):
+    for module in ("auxiliary", "bitvectors", "event", "hooks", "mudsock",
+                   "mudsys"):
         inject(module, getattr(nakedsun, module))
 
     ## MUD Library Initialization
