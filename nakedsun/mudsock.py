@@ -390,7 +390,7 @@ class Mudsock(auxiliary.AuxiliaryBase):
             sequences, you should use :func:`send_data`.
         """
         if not isinstance(message, unicode):
-            message = unicode(message)
+            message = message.decode(self._encoding)
 
         if environ:
             log.todo("Implement a template engine.")

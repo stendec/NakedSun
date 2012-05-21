@@ -83,7 +83,7 @@ def get_greeting(cache=True):
     """
     if not cache or not "greeting" in _globals:
         with open(os.path.join("txt", "greeting"), "rb") as fl:
-            _globals["greeting"] = fl.read().decode("utf8")
+            _globals["greeting"] = fl.read()
     return _globals["greeting"]
 
 def get_motd(cache=True):
@@ -94,7 +94,7 @@ def get_motd(cache=True):
     """
     if not cache or not "motd" in _globals:
         with open(os.path.join("txt", "motd"), "rb") as fl:
-            _globals["motd"] = fl.read().decode("utf8")
+            _globals["motd"] = fl.read()
     return _globals["motd"]
 
 def ite(statement, if_true, if_false):

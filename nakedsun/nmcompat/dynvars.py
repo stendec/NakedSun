@@ -104,7 +104,13 @@ def has(thing, key):
 # Initialization
 ###############################################################################
 
-auxiliary.install(AUX_KEY, DynVarAux, "character, room, object")
+auxiliary.install(AUX_KEY, DynVarAux, "account, character, room, object")
+
+mudsys.add_acct_method("deletevar", deleter)
+mudsys.add_acct_method("delvar", deleter)
+mudsys.add_acct_method("getvar", getter)
+mudsys.add_acct_method("hasvar", has)
+mudsys.add_acct_method("setvar", setter)
 
 mudsys.add_char_method("deletevar", deleter)
 mudsys.add_char_method("delvar", deleter)

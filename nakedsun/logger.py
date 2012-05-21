@@ -70,13 +70,15 @@ COLORS = {
 
 class ColoredFormatter(logging.Formatter):
     def __init__(self, msg, datefmt=None, use_color=True):
-        logging.Formatter.__init__(self, msg, datefmt)
+        super(ColoredFormatter, self).__init__(msg, datefmt)
         self.use_color = use_color
 
     def format(self, record):
         level = record.levelname
         if self.use_color and level in COLORS:
-            level_color = "\x1B[1;%dm%s\x1B[0m" % (30 + COLORS[level], level)
+            spacing = " " * (9 - len(level))
+            level_color = "\x1B[1;%dm%s%s\x1B[0m" % (30 + COLORS[level],
+                                                     spacing, level)
             record.levelname = level_color
         return logging.Formatter.format(self, record)
 
