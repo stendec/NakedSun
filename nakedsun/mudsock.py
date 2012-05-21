@@ -80,6 +80,7 @@ class Mudsock(auxiliary.AuxiliaryBase):
         connection.on_read = self._on_read
 
         # Internal State
+        self._out_buffer = []
         self._ihs = []
         self._ch = None
         self._encoding = None
@@ -233,20 +234,117 @@ class Mudsock(auxiliary.AuxiliaryBase):
     def replace_ih(self, handler_func, prompt_func=None, state=None,
                    cleanup_func=None):
         """
-        This is a convenience function that first pops the current input handler
-        from the stack before pushing the new input handler.
+        This is a convenience function that first pops the current input
+        handler from the stack before pushing the new input handler.
         """
         self.pop_ih()
         self.push_ih(handler_func, prompt_func, state, cleanup_func)
 
-    ##### Communication ########################################################
+    ##### Communication Internals #############################################
 
-    @log.implement
+    def _handle_write(self, mode="text"):
+        """
+        Iterate through the output buffer and call the appropriate hooks.
+        """
+        output = []
+        self.outbound_text = []
+
+        while self._out_buffer:
+            out = self._out_buffer.pop(0)
+
+            # If we run across an actual string and not a unicode string, flush
+            # everything out so we can send that raw.
+            if isinstance(out, str):
+                if self.outbound_text:
+                    self.outbound_text = u"".join(self.outbound_text)
+                    hooks.run("process_outbound_%s" % mode, self)
+                    hooks.run("finalize_outbound_%s" % mode, self)
+                    output.append(self.outbound_text.encode(self._encoding,
+                        "replace").replace("\xFF", "\xFF\xFF"))
+                    self.outbound_text = []
+                output.append(out)
+            else:
+                self.outbound_text.append(out)
+
+        # Now, flush outbound_text.
+        if self.outbound_text:
+            self.outbound_text = u"".join(self.outbound_text)
+            hooks.run("process_outbound_%s" % mode, self)
+            hooks.run("finalize_outbound_%s" % mode, self)
+            output.append(self.outbound_text.encode(self._encoding,
+                "replace").replace("\xFF", "\xFF\xFF"))
+
+        # Clear outbound_text and send output.
+        self.outbound_text = None
+        for out in output:
+            self._connection.write(out)
+
+    def _perform_write(self):
+        """
+        Process the output buffer and send it on to the networking layer.
+        """
+        self._scheduled_for_write = False
+
+        # If there's no connection, clearly we can't send anything. We'll be
+        # cleaned up soon too, so just return for now.
+        if not self._connection or not self._connection.connected:
+            return
+
+        # Run a useless hook!
+        hooks.run("flush", self)
+
+        # If we don't have anything to write out, just end now.
+        if not self._out_buffer and (not self._ihs or not self._busted):
+            return
+
+        # Handle the output buffer.
+        self._handle_write()
+
+        # Now, the prompt.
+        if self._busted:
+            self._show_prompt()
+            self._handle_write("prompt")
+
+        # Clear outbound text now that we're all done.
+        self.outbound_text = None
+
+    _scheduled_for_write = False
+
+    def _schedule_write(self):
+        """
+        Schedule this connection to have data sent to the remote client on the
+        next pulse.
+        """
+        if not self._scheduled_for_write:
+            self._scheduled_for_write = True
+            pants.engine.callback(self._perform_write)
+
+    def _show_prompt(self):
+        """
+        Display the prompt.
+        """
+        self._busted = False
+        if not self._ihs:
+            return
+
+        try:
+            self._ihs[-1][1](self)
+        except Exception:
+            state = self._ihs[-1][2]
+            log.exception("An error occurred while running the prompt display "
+                          "function for state %r on connection #%d." %
+                          (self._ihs[-1][2], self._uid))
+
+    ##### Communication #######################################################
+
+    _busted = False
+
     def bust_prompt(self):
         """
         Mark the connection to have its prompt re-sent next pulse.
         """
-        pass
+        self._busted = True
+        self._schedule_write()
 
     def close(self):
         """ Close the connection. """
@@ -281,21 +379,52 @@ class Mudsock(auxiliary.AuxiliaryBase):
         provided, the message will be processed with the active template engine
         before being sent. If newline is True, a line return will be appended
         to the message as well.
+
+        .. note::
+
+            NakedSun uses unicode internally, so any byte strings passed to
+            this function will be converted into unicode before they're sent to
+            the remote client.
+
+            If you need to send raw bytes, such as for sending telnet
+            sequences, you should use :func:`send_data`.
         """
+        if not isinstance(message, unicode):
+            message = unicode(message)
+
         if environ:
             log.todo("Implement a template engine.")
 
         if newline:
             message += "\r\n"
 
-        log.todo("Implement proper output buffering.")
-        self._connection.write(message)
+        self._out_buffer.append(message)
+        self._schedule_write()
 
     def send_raw(self, message):
         """
         Send the message to the remote host without appending a line return.
+
+        .. note::
+
+            NakedSun uses unicode internally, so any byte strings passed to
+            this function will be converted into unicode before they're sent to
+            the remote client.
+
+            If you need to send raw bytes, such as for sending telnet
+            sequences, you should use :func:`send_data`.
         """
         self.send(message, newline=False)
+
+    def send_data(self, data):
+        """
+        Send a raw string to the remote client. This string will not be
+        processed with any hooks prior to being sent.
+        """
+        if not isinstance(data, str):
+            raise TypeError("Only byte strings may be sent with send_data.")
+        self._out_buffer.append(data)
+        self._schedule_write()
 
     ##### Private Event Handlers ###############################################
 

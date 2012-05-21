@@ -25,7 +25,12 @@ server down.
 # Imports
 ###############################################################################
 
+from . import account
 from . import bitvectors
+from . import char
+from . import mudsock
+from . import obj
+from . import room
 
 from . import logger as log
 
@@ -65,7 +70,6 @@ def account_exists(name):
     """
     return False
 
-@log.implement
 def add_acct_method(name, method):
     """
     Add a function, property, or other attribute to the
@@ -77,9 +81,8 @@ def add_acct_method(name, method):
         anything special. You may simply modify the :class:`account.Account`
         class directly.
     """
-    pass
+    setattr(account.Account, name, method)
 
-@log.implement
 def add_char_method(name, method):
     """
     Add a function, property, or other attribute to the
@@ -91,9 +94,29 @@ def add_char_method(name, method):
         anything special. You may simply modify the :class:`char.Char`
         class directly.
     """
+    setattr(char.Char, name, method)
+
+@log.implement
+def add_cmd(*args):
     pass
 
 @log.implement
+def add_cmd_check(*args):
+    pass
+
+@log.implement
+def set_cmd_move(*args):
+    pass
+
+@log.implement
+def register_dflt_move_cmd(*args):
+    pass
+
+@log.implement
+def register_move_check(*args):
+    pass
+
+
 def add_exit_method(name, method):
     """
     Add a function, property, or other attribute to the
@@ -107,7 +130,6 @@ def add_exit_method(name, method):
     """
     pass
 
-@log.implement
 def add_obj_method(name, method):
     """
     Add a function, property, or other attribute to the
@@ -119,9 +141,8 @@ def add_obj_method(name, method):
         anything special. You may simply modify the :class:`obj.Obj`
         class directly.
     """
-    pass
+    setattr(obj.Obj, name, method)
 
-@log.implement
 def add_room_method(name, method):
     """
     Add a function, property, or other attribute to the
@@ -133,9 +154,8 @@ def add_room_method(name, method):
         anything special. You may simply modify the :class:`room.Room`
         class directly.
     """
-    pass
+    setattr(room.Room, name, method)
 
-@log.implement
 def add_sock_method(name, method):
     """
     Add a function, property, or other attribute to the
@@ -147,7 +167,7 @@ def add_sock_method(name, method):
         anything special. You may simply modify the :class:`mudsock.Mudsock`
         class directly.
     """
-    pass
+    setattr(mudsock.Mudsock, name, method)
 
 def create_bit(bitvector, *bits):
     """ See :func:`bitvectors.create_bitvector`. """

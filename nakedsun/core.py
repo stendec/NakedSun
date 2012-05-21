@@ -293,8 +293,9 @@ def main():
 
     # Inject a series of modules into sys.modules for NakedMud compatibility.
     log.info(u"Injecting global modules for NakedMud compatibility.")
-    for module in ("auxiliary", "bitvectors", "char", "event", "hooks",
-                   "mudsock", "mud", "mudsys"):
+    for module in ("account", "auxiliary", "bitvectors", "char", "event",
+                   "hooks", "mudsock", "mud", "mudsys", "obj", "room",
+                   "storage"):
         inject(module, getattr(nakedsun, module))
 
     ## MUD Library Initialization
@@ -358,16 +359,6 @@ def main():
         assume_uid(args.uid, args.gid, args.umask)
 
     ## The Event Loop
-
-    # Hacks!
-    @nakedsun.hooks.hook
-    def receive_connection(sock):
-        log.info("New connection #%d from remote host %r." % (sock.uid, sock._connection.remote_addr))
-        sock.send("This is awesome.")
-
-    @nakedsun.hooks.hook
-    def dns_complete(sock):
-        log.info("Resolved connection #%d to %r." % (sock.uid, sock.hostname))
 
     log.info(u"Entering the game loop.")
     log.line()

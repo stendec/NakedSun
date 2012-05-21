@@ -16,30 +16,23 @@
 #
 ###############################################################################
 """
-This module contains the character class used for all characters within the
-MUD, and functions to iterate over all those characters.
+This module contains miscellaneous utility functions and classes.
 """
 
 ###############################################################################
 # Imports
 ###############################################################################
 
-import os
-
-from . import auxiliary
-from . import bitvectors
-from . import hooks
 from . import logger as log
 
 ###############################################################################
-# Char Class
+# The Callable Tuple
 ###############################################################################
 
-@auxiliary.register("character")
-class Char(auxiliary.AuxiliaryBase):
+class CallableFrozenSet(frozenset):
     """
-    This class represents a character in the NakedSun server, be that character
-    a player character or an NPC. It is responsible for tracking any and all
-    information on a character and interacting with that character.
+    This subclass of frozenset merely makes the frozenset, when called,
+    return itself. This is useful for NakedMud compatibility.
     """
-    pass
+    def __call__(self):
+        return self

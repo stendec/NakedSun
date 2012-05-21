@@ -16,18 +16,15 @@
 #
 ###############################################################################
 """
-This module contains the character class used for all characters within the
-MUD, and functions to iterate over all those characters.
+This module contains the Obj class used for all objects within the
+MUD, and functions to iterate over and work with those objects.
 """
 
 ###############################################################################
 # Imports
 ###############################################################################
 
-import os
-
 from . import auxiliary
-from . import bitvectors
 from . import hooks
 from . import logger as log
 
@@ -35,11 +32,6 @@ from . import logger as log
 # Char Class
 ###############################################################################
 
-@auxiliary.register("character")
-class Char(auxiliary.AuxiliaryBase):
-    """
-    This class represents a character in the NakedSun server, be that character
-    a player character or an NPC. It is responsible for tracking any and all
-    information on a character and interacting with that character.
-    """
+@auxiliary.register("object")
+class Obj(auxiliary.AuxiliaryBase):
     pass

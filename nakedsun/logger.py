@@ -41,6 +41,7 @@ _width = 80
 
 critical = debug = error = exception = info = warning = log = None
 
+DEPRECIATED = logging.INFO - 1
 LINE = logging.INFO + 1
 NAKED = LINE + 1
 MUD = NAKED + 1

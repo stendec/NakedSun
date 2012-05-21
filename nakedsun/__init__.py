@@ -26,6 +26,7 @@ systems like pre-existing stats systems.
 # Imports
 ###############################################################################
 
+from . import account
 from . import auxiliary
 from . import bitvectors
 from . import char
@@ -34,6 +35,8 @@ from . import hooks
 from . import mud
 from . import mudsock
 from . import mudsys
+from . import obj
+from . import room
 from . import semver
 from . import settings
 
